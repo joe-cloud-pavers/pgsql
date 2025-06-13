@@ -1,4 +1,119 @@
 SELECT
+    -- Select the common key, coalescing to handle NULLs from the outer join
+    COALESCE(mdm.prov_loc_speclty_key, src.prov_loc_speclty_key) AS common_prov_loc_speclty_key,
+
+    -- Determine existence status based on the common key
+    CASE
+        WHEN mdm.prov_loc_speclty_key IS NOT NULL AND src.prov_loc_speclty_key IS NOT NULL THEN 'Matched in Both'
+        WHEN mdm.prov_loc_speclty_key IS NOT NULL THEN 'Only in MDM_PROV_LOC_SPECLTY'
+        WHEN src.prov_loc_speclty_key IS NOT NULL THEN 'Only in SRC'
+        ELSE 'Not exists in any one' -- This case implies an issue if prov_loc_speclty_key could be NULL in either, otherwise shouldn't occur
+    END AS prov_loc_speclty_key_existence_status,
+
+    -- Comparison for 'speclty_key'
+    CASE
+        WHEN mdm.prov_loc_speclty_key IS NOT NULL AND src.prov_loc_speclty_key IS NOT NULL THEN
+            -- If key exists in both, compare their 'speclty_key' values
+            CASE
+                WHEN mdm.speclty_key IS NOT DISTINCT FROM src.speclty_key THEN 'speclty_key: Match (Both: ' || COALESCE(mdm.speclty_key::text, 'NULL') || ')'
+                ELSE 'speclty_key: Mismatch (MDM: ' || COALESCE(mdm.speclty_key::text, 'NULL') || ', SRC: ' || COALESCE(src.speclty_key::text, 'NULL') || ')'
+            END
+        WHEN mdm.prov_loc_speclty_key IS NOT NULL THEN 'speclty_key: Only in MDM (Value: ' || COALESCE(mdm.speclty_key::text, 'NULL') || ')'
+        WHEN src.prov_loc_speclty_key IS NOT NULL THEN 'speclty_key: Only in SRC (Value: ' || COALESCE(src.speclty_key::text, 'NULL') || ')'
+        ELSE 'speclty_key: N/A' -- Should not happen if common_prov_loc_speclty_key is not null
+    END AS speclty_key_comparison,
+
+    -- Comparison for 'speclty_cd'
+    CASE
+        WHEN mdm.prov_loc_speclty_key IS NOT NULL AND src.prov_loc_speclty_key IS NOT NULL THEN
+            -- If key exists in both, compare their 'speclty_cd' values
+            CASE
+                WHEN mdm.speclty_cd IS NOT DISTINCT FROM src.speclty_cd THEN 'speclty_cd: Match (Both: ' || COALESCE(mdm.speclty_cd::text, 'NULL') || ')'
+                ELSE 'speclty_cd: Mismatch (MDM: ' || COALESCE(mdm.speclty_cd::text, 'NULL') || ', SRC: ' || COALESCE(src.speclty_cd::text, 'NULL') || ')'
+            END
+        WHEN mdm.prov_loc_speclty_key IS NOT NULL THEN 'speclty_cd: Only in MDM (Value: ' || COALESCE(mdm.speclty_cd::text, 'NULL') || ')'
+        WHEN src.prov_loc_speclty_key IS NOT NULL THEN 'speclty_cd: Only in SRC (Value: ' || COALESCE(src.speclty_cd::text, 'NULL') || ')'
+        ELSE 'speclty_cd: N/A'
+    END AS speclty_cd_comparison,
+
+    -- Comparison for 'prim_speclty_ind'
+    CASE
+        WHEN mdm.prov_loc_speclty_key IS NOT NULL AND src.prov_loc_speclty_key IS NOT NULL THEN
+            -- If key exists in both, compare their 'prim_speclty_ind' values
+            CASE
+                WHEN mdm.prim_speclty_ind IS NOT DISTINCT FROM src.prim_speclty_ind THEN 'prim_speclty_ind: Match (Both: ' || COALESCE(mdm.prim_speclty_ind::text, 'NULL') || ')'
+                ELSE 'prim_speclty_ind: Mismatch (MDM: ' || COALESCE(mdm.prim_speclty_ind::text, 'NULL') || ', SRC: ' || COALESCE(src.prim_speclty_ind::text, 'NULL') || ')'
+            END
+        WHEN mdm.prov_loc_speclty_key IS NOT NULL THEN 'prim_speclty_ind: Only in MDM (Value: ' || COALESCE(mdm.prim_speclty_ind::text, 'NULL') || ')'
+        WHEN src.prov_loc_speclty_key IS NOT NULL THEN 'prim_speclty_ind: Only in SRC (Value: ' || COALESCE(src.prim_speclty_ind::text, 'NULL') || ')'
+        ELSE 'prim_speclty_ind: N/A'
+    END AS prim_speclty_ind_comparison
+
+FROM
+    enac_nti_o.mdm_prov_loc_speclty mdm
+FULL OUTER JOIN
+    src ON mdm.prov_loc_speclty_key = src.prov_loc_speclty_key;
+
+
+
+
+
+MASTER
+
+  
+SELECT
+  src.prov_loc_speclty_key,
+  src.speclty_key         AS src_speclty_key,
+  mdm.speclty_key         AS mdm_speclty_key,
+  src.speclty_cd          AS src_speclty_cd,
+  mdm.speclty_cd          AS mdm_speclty_cd,
+  src.prim_speclty_ind    AS src_prim_speclty_ind,
+  mdm.prim_speclty_ind    AS mdm_prim_speclty_ind,
+
+  CASE
+    WHEN mdm.prov_loc_speclty_key IS NOT NULL THEN
+      CASE
+        WHEN src.speclty_key = mdm.speclty_key
+          AND src.speclty_cd = mdm.speclty_cd
+          AND src.prim_speclty_ind = mdm.prim_speclty_ind
+        THEN 'Matched in Both'
+        ELSE 'Key Matched, Data Mismatch'
+      END
+    ELSE 'Matched in SRC'
+  END AS match_status
+
+FROM
+  src
+LEFT JOIN enac_nti_o.mdm_prov_loc_speclty mdm
+  ON src.prov_loc_speclty_key = mdm.prov_loc_speclty_key;
+
+
+--
+SELECT
+  COALESCE(src.prov_loc_speclty_key, mdm.prov_loc_speclty_key) AS prov_loc_speclty_key,
+  src.speclty_key         AS src_speclty_key,
+  mdm.speclty_key         AS mdm_speclty_key,
+  src.speclty_cd          AS src_speclty_cd,
+  mdm.speclty_cd          AS mdm_speclty_cd,
+  src.prim_speclty_ind    AS src_prim_speclty_ind,
+  mdm.prim_speclty_ind    AS mdm_prim_speclty_ind,
+
+  CASE
+    WHEN src.prov_loc_speclty_key IS NOT NULL AND mdm.prov_loc_speclty_key IS NOT NULL THEN
+      CASE
+        WHEN src.speclty_key = mdm.speclty_key
+          AND src.speclty_cd = mdm.speclty_cd
+          AND src.prim_speclty_ind = mdm.prim_speclty_ind
+        THEN 'Matched in Both'
+        ELSE 'Key Matched, Data Mismatch'
+      END
+    WHEN src.prov_loc_speclty_key IS NOT NULL THEN 'Matched in SRC'
+    WHEN mdm.prov_loc_speclty_key IS NOT NULL THEN 'Matched in mdm_prov_loc_speclty'
+    ELSE 'Not exists in any one'  -- logically unreachab
+/*88888*/
+
+
+SELECT
   COALESCE(src.speclty_ckey, mdm.speclty_ckey) AS speclty_ckey,
   COALESCE(src.speclty_cd, mdm.speclty_cd) AS speclty_cd,
   COALESCE(src.prim_speclty_in, mdm.prim_speclty_in) AS prim_speclty_in,
