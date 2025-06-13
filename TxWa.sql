@@ -1,3 +1,23 @@
+
+-- The Query: Output if (A, B) is in TableA, TableB, or Both
+SELECT
+    COALESCE(ta.A, tb.A) AS A,
+    COALESCE(ta.B, tb.B) AS B,
+    CASE
+        WHEN ta.A IS NOT NULL AND tb.A IS NOT NULL THEN 'In Both'
+        WHEN ta.A IS NOT NULL THEN 'In TableA Only'
+        WHEN tb.A IS NOT NULL THEN 'In TableB Only'
+        ELSE 'Should not happen' -- This case would only occur if both A and B are NULL, which is unlikely for primary key components
+    END AS presence_status
+FROM
+    (SELECT DISTINCT A, B FROM TableA) AS ta
+FULL OUTER JOIN
+    (SELECT DISTINCT A, B FROM TableB) AS tb
+ON
+    ta.A = tb.A AND ta.B = tb.B
+ORDER BY A, B;
+
+
 --Transaction WrapAround 
 
 SELECT
