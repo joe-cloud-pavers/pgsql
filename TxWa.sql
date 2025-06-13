@@ -1,3 +1,20 @@
+SELECT
+  COALESCE(src.speclty_ckey, mdm.speclty_ckey) AS speclty_ckey,
+  COALESCE(src.speclty_cd, mdm.speclty_cd) AS speclty_cd,
+  COALESCE(src.prim_speclty_in, mdm.prim_speclty_in) AS prim_speclty_in,
+  CASE
+    WHEN src.speclty_ckey IS NOT NULL AND mdm.speclty_ckey IS NOT NULL THEN 'Matched in Both'
+    WHEN src.speclty_ckey IS NOT NULL THEN 'Matched in SRC'
+    WHEN mdm.speclty_ckey IS NOT NULL THEN 'Matched in mdm_prov_loc_speclty'
+    ELSE 'Not exists in any one'
+  END AS match_status
+FROM
+  src
+FULL OUTER JOIN
+  enac_nti_o.mdm_prov_loc_speclty mdm
+  ON src.speclty_ckey = mdm.speclty_ckey
+     AND src.speclty_cd = mdm.speclty_cd
+     AND src.prim_speclty_in = mdm.prim_speclty_in;
 
 -- The Query: Output if (A, B) is in TableA, TableB, or Both
 SELECT
